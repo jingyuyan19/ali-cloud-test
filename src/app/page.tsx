@@ -2,7 +2,7 @@ import BucketSelector from "./components/BucketSelector";
 import FileUploader from "./components/FileUploader";
 import FileGrid from "./components/FileGrid";
 
-export default async function Home() {
+export default function Home() {
   return (
     <main className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Alibaba Cloud OSS Demo</h1>

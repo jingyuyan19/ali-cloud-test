@@ -1,24 +1,46 @@
-import OSS from "ali-oss";
-import ClientBucketSelector from "./ClientBucketSelector";
+"use client";
 
-async function getBuckets() {
-  const ossClient = new OSS({
-    region: "oss-cn-beijing",
-    accessKeyId: process.env.OSS_ACCESS_KEY_ID,
-    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
-  });
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-  try {
-    const result = await ossClient.listBuckets();
-    return result.buckets.map((bucket: { name: string }) => bucket.name);
-  } catch (error) {
-    console.error("Error fetching buckets:", error);
-    return [];
-  }
-}
+export default function BucketSelector() {
+  const [buckets, setBuckets] = useState<string[]>([]);
+  const [selectedBucket, setSelectedBucket] = useState<string>("");
+  const router = useRouter();
 
-export default async function BucketSelector() {
-  const bucketList = await getBuckets();
+  useEffect(() => {
+    // Fetch buckets from your API
+    fetch("/api/oss?action=listBuckets")
+      .then((res) => res.json())
+      .then((data) => setBuckets(data.buckets));
+  }, []);
 
-  return <ClientBucketSelector bucketList={bucketList} />;
+  const handleBucketChange = async (value: string) => {
+    setSelectedBucket(value);
+    document.cookie = `selectedBucket=${value}; path=/; max-age=3600`; // Set cookie to expire in 1 hour
+    console.log("Selected bucket:", value);
+    router.refresh();
+  };
+
+  return (
+    <Select onValueChange={handleBucketChange} value={selectedBucket}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select a bucket" />
+      </SelectTrigger>
+      <SelectContent>
+        {buckets.map((bucket) => (
+          <SelectItem key={bucket} value={bucket}>
+            {bucket}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }

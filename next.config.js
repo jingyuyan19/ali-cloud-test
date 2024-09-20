@@ -2,12 +2,6 @@
 const nextConfig = {
   images: {
     domains: ["sharon-test.oss-cn-beijing.aliyuncs.com"],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.aliyuncs.com",
-      },
-    ],
   },
 };
 

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import OSS from "ali-oss";
 
 const ossClient = new OSS({
@@ -35,29 +35,69 @@ export async function GET(request: Request) {
     }
   }
 
+  if (action === "listBuckets") {
+    try {
+      const result = await ossClient.listBuckets();
+      return NextResponse.json({
+        buckets: result.buckets.map((b: any) => b.name),
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Error listing buckets" },
+        { status: 500 }
+      );
+    }
+  }
+
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }
 
-export async function POST(request: Request) {
-  const { bucket, fileName, fileContent } = await request.json();
-
-  if (!bucket || !fileName || !fileContent) {
-    return NextResponse.json(
-      { error: "Missing required parameters" },
-      { status: 400 }
-    );
-  }
-
+export async function POST(request: NextRequest) {
+  console.log("POST request received");
   try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    const bucket = formData.get("bucket") as string;
+
+    console.log("Received file:", file?.name);
+    console.log("Received bucket:", bucket);
+
+    if (!file) {
+      console.log("No file uploaded");
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    if (!bucket) {
+      console.log("No bucket specified");
+      return NextResponse.json(
+        { error: "No bucket specified" },
+        { status: 400 }
+      );
+    }
+
     const client = new OSS({
       ...ossClient.options,
       bucket: bucket,
     });
-    await client.put(fileName, Buffer.from(fileContent));
-    return NextResponse.json({ success: true });
-  } catch (error) {
+
+    console.log("OSS client configuration:", {
+      region: client.options.region,
+      accessKeyId: client.options.accessKeyId ? "***" : undefined,
+      accessKeySecret: client.options.accessKeySecret ? "***" : undefined,
+      bucket: bucket,
+    });
+
+    const buffer = await file.arrayBuffer();
+    const objectName = `uploads/${Date.now()}-${file.name}`;
+    const result = await client.put(objectName, Buffer.from(buffer));
+    return NextResponse.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Error uploading to OSS:", error);
     return NextResponse.json(
-      { error: "Error uploading file" },
+      {
+        error: "Error uploading file",
+        details: error.message || "Unknown error",
+      },
       { status: 500 }
     );
   }
